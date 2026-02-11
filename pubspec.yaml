@@ -1,0 +1,30 @@
+name: jachei_app
+description: "App de catálogo de serviços Jachei"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Dependências identificadas pelos erros:
+  cupertino_icons: ^1.0.8
+  dio: ^5.4.0
+  get_it: ^7.6.0
+  injectable: ^2.3.2
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Necessários para gerar o código do injectable:
+  build_runner: ^2.4.8
+  injectable_generator: ^2.4.1
+
+flutter:
+  uses-material-design: true
