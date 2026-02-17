@@ -28,6 +28,19 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   int _currentIndex = 0;
 
+  // --- Função que mapeia os nomes do banco para ícones do app ---
+  IconData _getIconForCategory(String name) {
+    switch (name.toLowerCase()) {
+      case 'elétrica': return Icons.electrical_services;
+      case 'hidráulica': return Icons.plumbing;
+      case 'limpeza': return Icons.cleaning_services;
+      case 'transporte': return Icons.local_shipping;
+      case 'beleza': return Icons.face;
+      case 'ti': return Icons.computer;
+      default: return Icons.category; // Ícone genérico se o nome for novo
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
@@ -93,7 +106,7 @@ class _HomeViewState extends State<HomeView> {
                             style: const TextStyle(color: Colors.grey, fontSize: 16),
                           ),
                           const SizedBox(height: 24),
-                          const CircularProgressIndicator(), // Indica que o app está tentando religar
+                          const CircularProgressIndicator(),
                         ],
                       ),
                     ),
@@ -101,7 +114,7 @@ class _HomeViewState extends State<HomeView> {
                 }
 
                 else if (state is HomeLoaded) {
-                  // O APP COMPLETO COM DADOS REAIS
+                  // O APP COMPLETO COM DADOS REAIS DO BANCO
                   return RefreshIndicator(
                     onRefresh: () async => context.read<HomeCubit>().getUserLocationAndData(),
                     child: SingleChildScrollView(
@@ -119,22 +132,30 @@ class _HomeViewState extends State<HomeView> {
                           ),
                           const SizedBox(height: 24),
 
-                          // 2. CARROSSEL DE CATEGORIAS
+                          // 2. CARROSSEL DE CATEGORIAS (Vindo do Spring Boot)
                           const Text('Categorias', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 16),
-                          SizedBox(
-                            height: 100,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: [
-                                _buildCategoryItem(context, 'Elétrica', Icons.electrical_services, primaryColor),
-                                _buildCategoryItem(context, 'Hidráulica', Icons.plumbing, primaryColor),
-                                _buildCategoryItem(context, 'Limpeza', Icons.cleaning_services, primaryColor),
-                                _buildCategoryItem(context, 'Transporte', Icons.local_shipping, primaryColor),
-                                _buildCategoryItem(context, 'Beleza', Icons.face, primaryColor),
-                              ],
+
+                          if (state.categorias.isEmpty)
+                            const Text('Nenhuma categoria cadastrada ainda.', style: TextStyle(color: Colors.grey))
+                          else
+                            SizedBox(
+                              height: 100, // Altura fixa para o carrossel horizontal
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                shrinkWrap: true, // Adicionado para segurança de layout
+                                itemCount: state.categorias.length,
+                                itemBuilder: (context, index) {
+                                  final cat = state.categorias[index];
+                                  return _buildCategoryItem(
+                                      context,
+                                      cat.nome,
+                                      _getIconForCategory(cat.nome), // Puxa o ícone mapeado
+                                      primaryColor
+                                  );
+                                },
+                              ),
                             ),
-                          ),
                           const SizedBox(height: 24),
 
                           // 3. LISTA DE PRESTADORES DO SPRING BOOT
@@ -150,8 +171,8 @@ class _HomeViewState extends State<HomeView> {
                             )
                           else
                             ListView.builder(
-                              shrinkWrap: true, // Necessário dentro do SingleChildScrollView
-                              physics: const NeverScrollableScrollPhysics(), // Desativa rolagem dupla
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
                               itemCount: state.prestadores.length,
                               itemBuilder: (context, index) {
                                 final prestador = state.prestadores[index];
@@ -175,6 +196,7 @@ class _HomeViewState extends State<HomeView> {
         onTap: (index) => setState(() => _currentIndex = index),
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed, // Impede a barra de pular ao clicar
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Busca'),
@@ -235,7 +257,6 @@ class _HomeViewState extends State<HomeView> {
             ),
           ],
         ),
-        // Adiciona ícones visuais para mostrar se atende 24h ou faz delivery
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

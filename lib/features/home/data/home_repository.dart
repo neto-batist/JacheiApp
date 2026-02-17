@@ -2,6 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import 'models/prestador_model.dart';
+import 'models/categoria_model.dart';
 
 @lazySingleton
 class HomeRepository {
@@ -24,6 +25,16 @@ class HomeRepository {
 
     } catch (e) {
       throw Exception('Falha ao conectar no backend Java.');
+    }
+  }
+
+  Future<List<CategoriaModel>> getCategorias() async {
+    try {
+      final response = await dio.get('/catalogo/categorias');
+      final List dados = response.data;
+      return dados.map((json) => CategoriaModel.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception('Falha ao buscar categorias.');
     }
   }
 }
