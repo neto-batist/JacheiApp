@@ -21,7 +21,7 @@ class PrestadorModel {
   factory PrestadorModel.fromJson(Map<String, dynamic> json) {
     return PrestadorModel(
       id: json['id'] ?? 0,
-      nome: json['nome'] ?? 'Sem Nome',
+      nome: json['usuario']['nome'] ?? 'Sem Nome',
       atende24H: json['atende24h'] ?? false, // Puxando o nome exato do novo JSON
       fazDelivery: json['fazDelivery'] ?? false, // Puxando o nome exato do novo JSON
     );
