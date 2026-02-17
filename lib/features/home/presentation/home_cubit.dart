@@ -1,73 +1,73 @@
+// lib/features/home/presentation/home_cubit.dart
+import 'dart:async'; // Necessário para o Timer
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import '../data/home_repository.dart';
+import '../data/models/prestador_model.dart';
 
-// --- ESTADOS DA TELA ---
 abstract class HomeState {}
-
 class HomeInitial extends HomeState {}
-
 class HomeLoading extends HomeState {}
-
 class HomeLoaded extends HomeState {
   final String city;
-  HomeLoaded(this.city);
+  final List<PrestadorModel> prestadores;
+  HomeLoaded(this.city, this.prestadores);
 }
-
 class HomeError extends HomeState {
   final String message;
   HomeError(this.message);
 }
 
-// --- LÓGICA (CUBIT) ---
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit() : super(HomeInitial());
+  final HomeRepository repository;
 
-  Future<void> getUserLocation() async {
-    emit(HomeLoading()); // Avisa a tela para mostrar "Buscando..."
+  HomeCubit(this.repository) : super(HomeInitial());
+
+  Future<void> getUserLocationAndData() async {
+    // Se o estado já é erro (está no meio do retry), não zera a tela para Loading,
+    // apenas tenta silenciosamente por trás.
+    if (state is! HomeError) emit(HomeLoading());
 
     try {
-      // 1. Verifica se o GPS do celular está ligado
+      // 1. Permissões e GPS
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        return emit(HomeError('Ative o GPS do celular para ver serviços próximos.'));
-      }
+      if (!serviceEnabled) throw Exception('Ative o GPS');
 
-      // 2. Verifica se o usuário deu permissão para o app usar o GPS
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return emit(HomeError('Permissão de localização negada.'));
-        }
+        if (permission == LocationPermission.denied) throw Exception('Permissão negada');
       }
 
-      if (permission == LocationPermission.deniedForever) {
-        return emit(HomeError('Permissão negada permanentemente nas configurações.'));
-      }
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
 
-      // 3. Pega a coordenada exata (Latitude e Longitude)
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      // 4. Converte a coordenada no nome da cidade
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-
+      // Apenas para mostrar o nome na UI
+      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      String city = 'Cidade Desconhecida';
       if (placemarks.isNotEmpty) {
-        Placemark place = placemarks.first;
-        // Tenta pegar a cidade (subAdministrativeArea) ou o bairro/localidade (locality)
-        String city = place.subAdministrativeArea ?? place.locality ?? 'Cidade Desconhecida';
-
-        emit(HomeLoaded(city)); // Avisa a tela que deu certo!
-      } else {
-        emit(HomeError('Não foi possível identificar sua cidade.'));
+        city = placemarks.first.subAdministrativeArea ?? placemarks.first.locality ?? 'Cidade Desconhecida';
       }
+
+      // 2. BUSCA GEOGRÁFICA NO BACKEND (LAT E LNG)
+      final prestadores = await repository.getPrestadoresProximos(
+          position.latitude,
+          position.longitude
+      );
+
+      // 3. Sucesso! Mostra os dados na tela
+      emit(HomeLoaded(city, prestadores));
+
     } catch (e) {
-      emit(HomeError('Erro ao buscar localização. Tente novamente.'));
+      // 4. RETRY AUTOMÁTICO
+      emit(HomeError('Sem conexão com o servidor. \nTentando reconectar em 10 segundos...'));
+
+      // Espera 10 segundos e chama a si mesmo recursivamente
+      Timer(const Duration(seconds: 10), () {
+        if (!isClosed) { // Garante que a tela ainda está aberta antes de refazer a chamada
+          getUserLocationAndData();
+        }
+      });
     }
   }
 }
