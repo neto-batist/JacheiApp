@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jachei_app/core/di/configure_dependencies.dart';
 import 'package:jachei_app/core/theme/app_theme.dart'; // Importe o seu tema aqui
+import 'package:jachei_app/features/home/presentation/home_page.dart';
 
 void main() async {
   // Garante que a engine do Flutter está pronta antes de rodar código async
@@ -21,10 +22,7 @@ class JacheiApp extends StatelessWidget {
       title: 'Jachei',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme, // << APONTA PARA O SEU NOVO ARQUIVO DE TEMA
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Jachei')), // Coloquei uma AppBar para você ver a cor aplicada
-        body: const Center(child: Text("Jachei - Backend Conectado!")),
-      ),
+      home: const HomePage(),
     );
   }
 }

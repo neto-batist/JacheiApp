@@ -2,32 +2,38 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
-// Os estados que nossa tela pode ter
+// --- ESTADOS DA TELA ---
 abstract class HomeState {}
+
 class HomeInitial extends HomeState {}
+
 class HomeLoading extends HomeState {}
+
 class HomeLoaded extends HomeState {
   final String city;
   HomeLoaded(this.city);
 }
+
 class HomeError extends HomeState {
   final String message;
   HomeError(this.message);
 }
 
-// A lógica
+// --- LÓGICA (CUBIT) ---
 class HomeCubit extends Cubit<HomeState> {
   HomeCubit() : super(HomeInitial());
 
   Future<void> getUserLocation() async {
-    emit(HomeLoading());
+    emit(HomeLoading()); // Avisa a tela para mostrar "Buscando..."
 
     try {
+      // 1. Verifica se o GPS do celular está ligado
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        return emit(HomeError('Ative o GPS do celular.'));
+        return emit(HomeError('Ative o GPS do celular para ver serviços próximos.'));
       }
 
+      // 2. Verifica se o usuário deu permissão para o app usar o GPS
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -36,12 +42,16 @@ class HomeCubit extends Cubit<HomeState> {
         }
       }
 
-      // Pega a coordenada (Latitude e Longitude)
+      if (permission == LocationPermission.deniedForever) {
+        return emit(HomeError('Permissão negada permanentemente nas configurações.'));
+      }
+
+      // 3. Pega a coordenada exata (Latitude e Longitude)
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // Transforma a coordenada no nome da cidade
+      // 4. Converte a coordenada no nome da cidade
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
@@ -49,13 +59,15 @@ class HomeCubit extends Cubit<HomeState> {
 
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks.first;
-        String cidade = place.subAdministrativeArea ?? place.locality ?? 'Cidade Desconhecida';
-        emit(HomeLoaded(cidade));
+        // Tenta pegar a cidade (subAdministrativeArea) ou o bairro/localidade (locality)
+        String city = place.subAdministrativeArea ?? place.locality ?? 'Cidade Desconhecida';
+
+        emit(HomeLoaded(city)); // Avisa a tela que deu certo!
       } else {
-        emit(HomeError('Não foi possível identificar a cidade.'));
+        emit(HomeError('Não foi possível identificar sua cidade.'));
       }
     } catch (e) {
-      emit(HomeError('Erro ao buscar localização: $e'));
+      emit(HomeError('Erro ao buscar localização. Tente novamente.'));
     }
   }
 }
