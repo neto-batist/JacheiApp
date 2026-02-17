@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jachei_app/core/di/configure_dependencies.dart';
+import 'package:jachei_app/core/theme/app_theme.dart'; // Importe o seu tema aqui
 
 void main() async {
   // Garante que a engine do Flutter está pronta antes de rodar código async
@@ -19,18 +20,10 @@ class JacheiApp extends StatelessWidget {
     return MaterialApp(
       title: 'Jachei',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-        useMaterial3: true,
-        // Configuração básica de inputs para ficar bonito
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: Colors.grey.shade100,
-        ),
-      ),
-      home: const Scaffold(
-        body: Center(child: Text("Jachei - Backend Conectado!")),
+      theme: AppTheme.lightTheme, // << APONTA PARA O SEU NOVO ARQUIVO DE TEMA
+      home: Scaffold(
+        appBar: AppBar(title: const Text('Jachei')), // Coloquei uma AppBar para você ver a cor aplicada
+        body: const Center(child: Text("Jachei - Backend Conectado!")),
       ),
     );
   }
