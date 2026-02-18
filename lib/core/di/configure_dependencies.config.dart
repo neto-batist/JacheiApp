@@ -16,6 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart' as _i460;
 
 import '../../features/auth/data/repositories/auth_repository.dart' as _i573;
 import '../../features/home/data/home_repository.dart' as _i65;
+import '../../features/profile/data/repositories/profile_repository.dart'
+    as _i361;
 import 'register_module.dart' as _i291;
 
 extension GetItInjectableX on _i174.GetIt {
@@ -39,6 +41,8 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i573.AuthRepository(gh<_i361.Dio>()));
     gh.lazySingleton<_i65.HomeRepository>(
         () => _i65.HomeRepository(gh<_i361.Dio>()));
+    gh.lazySingleton<_i361.ProfileRepository>(
+        () => _i361.ProfileRepository(gh<_i361.Dio>()));
     return this;
   }
 }
