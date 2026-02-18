@@ -19,6 +19,7 @@ dependencies:
   geolocator: ^14.0.2
   geocoding: ^4.0.0
   flutter_bloc: ^9.1.1
+  flutter_launcher_icons: ^0.13.1
 
 dev_dependencies:
   flutter_test:
@@ -31,3 +32,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/load_page.png
+
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo_app.png"
+  min_sdk_android: 21 # Opcional, mas recomendado para o Android
+  web:
+    generate: true
+    image_path: "assets/images/logo_app.png"
