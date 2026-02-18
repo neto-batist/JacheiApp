@@ -1,6 +1,10 @@
 // lib/features/splash/presentation/splash_page.dart
 import 'package:flutter/material.dart';
+import 'package:jachei_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:jachei_app/features/home/presentation/home_page.dart';
+import 'package:jachei_app/features/auth/presentation/sign_up_page.dart';
+import 'package:jachei_app/core/di/configure_dependencies.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -16,25 +20,52 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    // Configura o tempo da animação do círculo abrindo (ex: 1.5 segundos)
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
 
-    // Cria a curva de animação (começa devagar e acelera)
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    // Inicia a animação imediatamente
     _controller.forward().then((_) {
-      // Quando o círculo terminar de abrir, espera mais 1 segundo para a pessoa ver a logo, e vai pra Home
       Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomePage()),
-          );
+
+          // ---> A LÓGICA DE DECISÃO COMEÇA AQUI <---
+          final prefs = getIt<SharedPreferences>();
+          final logadoUid = prefs.getString('user_uid');
+
+          if (logadoUid != null && logadoUid.isNotEmpty) {
+
+            // Pergunta ao Spring Boot se o cara ainda existe lá
+            final authRepo = getIt<AuthRepository>();
+            authRepo.verificarSeUsuarioExiste(logadoUid).then((existe) {
+              if (mounted) {
+                if (existe) {
+                  // Existe! Segue pra Home.
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const HomePage()),
+                  );
+                } else {
+                  // Fantasma detectado! Apaga do celular e manda pro Cadastro.
+                  prefs.remove('user_uid');
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const SignUpPage()),
+                  );
+                }
+              }
+            });
+
+          } else {
+            // É a primeira vez abrindo o app, vai para o Cadastro
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const SignUpPage()),
+            );
+          }
+
         }
       });
     });
