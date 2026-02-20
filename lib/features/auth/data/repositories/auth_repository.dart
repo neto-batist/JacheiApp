@@ -1,4 +1,3 @@
-// lib/features/auth/data/auth_repository.dart
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import 'package:uuid/uuid.dart';
@@ -9,10 +8,27 @@ class AuthRepository {
 
   AuthRepository(this.dio);
 
-  // Mapeia exatamente para o seu UsuarioRequest do Java
-  Future<String> cadastrarUsuario(String nome, String email) async {
+  // 1. O novo método de Login Real
+  Future<Map<String, dynamic>> login(String email, String senha) async {
     try {
-      final uid = const Uuid().v4(); // Gera um ID único simulando o Firebase
+      final response = await dio.post(
+        '/auth/login',
+        data: {
+          "email": email,
+          "senha": senha,
+        },
+      );
+      // Retorna o JSON (token, firebaseUid, nome, linkFoto)
+      return response.data;
+    } catch (e) {
+      throw Exception('Falha ao realizar login. Verifique suas credenciais.');
+    }
+  }
+
+  // 2. O Cadastro com a Senha Inclusa
+  Future<String> cadastrarUsuario(String nome, String email, String senha) async {
+    try {
+      final uid = const Uuid().v4();
 
       await dio.post(
         '/usuarios',
@@ -20,28 +36,29 @@ class AuthRepository {
           "nome": nome,
           "email": email,
           "firebaseUid": uid,
-          "linkFoto": "https://ui-avatars.com/api/?name=${nome.replaceAll(' ', '+')}&background=random"
+          "linkFoto": "https://ui-avatars.com/api/?name=${nome.replaceAll(' ', '+')}&background=random",
+          "senha": senha // <--- AGORA O BACKEND EXIGE SENHA
         },
       );
-
-      return uid; // Retorna o ID gerado para salvarmos no celular
+      return uid;
     } catch (e) {
       throw Exception('Falha ao cadastrar usuário no backend: $e');
     }
   }
 
+  // 3. Verifica o status do Usuário/Token na Splash Screen
   Future<bool> verificarSeUsuarioExiste(String uid) async {
     try {
-      // Faz um GET rápido no backend buscando pelo UID
       final response = await dio.get('/usuarios/me/$uid');
       return response.statusCode == 200;
     } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        return false; // O banco de dados confirmou: Usuário foi apagado!
+      // Adicionamos o 403 (Proibido/Sem Token) na lista de bloqueios
+      if (e.response?.statusCode == 404 ||
+          e.response?.statusCode == 401 ||
+          e.response?.statusCode == 403) {
+        return false;
       }
-      // Se for outro erro (ex: Servidor offline ou Sem Internet),
-      // deixamos entrar como 'true' para o app tentar o Auto-Retry lá na Home Page.
-      return true;
+      return true; // Mantém true apenas para Timeout, Erro 500 ou Falta de Internet real
     }
   }
 }

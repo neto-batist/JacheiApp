@@ -37,21 +37,22 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
           // ---> A LÓGICA DE DECISÃO COMEÇA AQUI <---
           final prefs = getIt<SharedPreferences>();
           final logadoUid = prefs.getString('user_uid');
+          final jwtToken = prefs.getString('jwt_token');
 
-          if (logadoUid != null && logadoUid.isNotEmpty) {
+          // Agora a porta só abre se tiver o UID E o Token JWT guardados!
+          if (logadoUid != null && logadoUid.isNotEmpty && jwtToken != null && jwtToken.isNotEmpty) {
 
-            // Pergunta ao Spring Boot se o cara ainda existe lá
             final authRepo = getIt<AuthRepository>();
             authRepo.verificarSeUsuarioExiste(logadoUid).then((existe) {
               if (mounted) {
                 if (existe) {
-                  // Existe! Segue pra Home.
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const HomePage()),
                   );
                 } else {
-                  // Fantasma detectado! Apaga do celular e manda pro Cadastro.
+                  // Fantasma ou Token Inválido! Apaga tudo do celular.
                   prefs.remove('user_uid');
+                  prefs.remove('jwt_token');
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const SignUpPage()),
                   );
@@ -60,7 +61,9 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
             });
 
           } else {
-            // É a primeira vez abrindo o app, vai para o Cadastro
+            // Se falta o UID ou falta o Token, limpa resquícios e vai pro Cadastro
+            prefs.remove('user_uid');
+            prefs.remove('jwt_token');
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const SignUpPage()),
             );

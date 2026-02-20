@@ -4,10 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 @module
 abstract class RegisterModule {
+  @preResolve
+  Future<SharedPreferences> get prefs => SharedPreferences.getInstance();
 
-  // Configuração Global do Dio (HTTP Client)
+  // Agora o Dio recebe o prefs por injeção de dependência automaticamente!
   @lazySingleton
-  Dio get dio {
+  Dio dio(SharedPreferences prefs) {
     final dio = Dio(BaseOptions(
       // ⚠️ ATENÇÃO AO IP:
       // Se usar Emulador Android: use 'http://10.0.2.2:8080'
@@ -16,25 +18,28 @@ abstract class RegisterModule {
       baseUrl: 'http://192.168.0.7:8080/api',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
     ));
 
-    // Interceptor para logs (ajuda muito a debugar)
-    dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        requestHeader: false,
-        responseHeader: false
+    // --- O ESPIÃO (INTERCEPTOR) DE SEGURANÇA ---
+    dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        // Antes de enviar a requisição, pega o Token e injeta no cabeçalho
+        final token = prefs.getString('jwt_token');
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        return handler.next(options);
+      },
+      onError: (DioException e, handler) {
+        // Se o Spring Boot reclamar que o token venceu (401), apagamos os dados locais
+        if (e.response?.statusCode == 401) {
+          prefs.remove('jwt_token');
+          prefs.remove('user_uid');
+        }
+        return handler.next(e);
+      },
     ));
 
     return dio;
   }
-
-  // SharedPreferences (Banco de dados local simples para tokens/configs)
-  // O @preResolve faz o app esperar o SharedPreferences carregar antes de iniciar
-  @preResolve
-  Future<SharedPreferences> get prefs => SharedPreferences.getInstance();
 }

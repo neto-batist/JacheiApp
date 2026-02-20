@@ -36,7 +36,7 @@ extension GetItInjectableX on _i174.GetIt {
       () => registerModule.prefs,
       preResolve: true,
     );
-    gh.lazySingleton<_i361.Dio>(() => registerModule.dio);
+    gh.lazySingleton<_i361.Dio>(() => registerModule.dio(gh<_i460.SharedPreferences>()));
     gh.lazySingleton<_i573.AuthRepository>(
         () => _i573.AuthRepository(gh<_i361.Dio>()));
     gh.lazySingleton<_i65.HomeRepository>(

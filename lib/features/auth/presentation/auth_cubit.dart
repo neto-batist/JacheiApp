@@ -1,4 +1,3 @@
-// lib/features/auth/presentation/auth_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repositories/auth_repository.dart';
@@ -19,7 +18,6 @@ class AuthCubit extends Cubit<AuthState> {
   AuthCubit(this.repository, this.prefs) : super(AuthInitial());
 
   Future<void> cadastrar(String nome, String email, String senha) async {
-    // Validação simples
     if (nome.isEmpty || email.isEmpty || senha.isEmpty) {
       emit(AuthError('Preencha todos os campos.'));
       return;
@@ -28,17 +26,38 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
 
     try {
-      // 1. Cadastra no Backend
-      final String uid = await repository.cadastrarUsuario(nome, email);
+      // 1. Cadastra no Banco
+      await repository.cadastrarUsuario(nome, email, senha);
 
-      // 2. Salva o status de "Logado" no celular
-      await prefs.setString('user_uid', uid);
-      await prefs.setString('user_nome', nome); // Bônus: Salva o nome para usar no Perfil depois
+      // 2. Faz o Login Automático para pegar o JWT
+      final loginData = await repository.login(email, senha);
 
-      // 3. Sucesso!
+      // 3. Salva no celular: O Token agora é a Chave Mestra!
+      await prefs.setString('jwt_token', loginData['token']);
+      await prefs.setString('user_uid', loginData['firebaseUid']);
+      await prefs.setString('user_nome', loginData['nome']);
+
       emit(AuthSuccess());
     } catch (e) {
-      emit(AuthError('Erro ao criar conta. Tente novamente.'));
+      emit(AuthError('Erro ao processar autenticação. Tente novamente.'));
+    }
+  }
+
+  // Já deixo o método de Login pronto para quando você for criar a Tela de Login!
+  Future<void> login(String email, String senha) async {
+    if (email.isEmpty || senha.isEmpty) {
+      emit(AuthError('Preencha e-mail e senha.'));
+      return;
+    }
+    emit(AuthLoading());
+    try {
+      final loginData = await repository.login(email, senha);
+      await prefs.setString('jwt_token', loginData['token']);
+      await prefs.setString('user_uid', loginData['firebaseUid']);
+      await prefs.setString('user_nome', loginData['nome']);
+      emit(AuthSuccess());
+    } catch (e) {
+      emit(AuthError('Credenciais incorretas.'));
     }
   }
 }
