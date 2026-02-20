@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jachei_app/core/di/configure_dependencies.dart';
+import 'package:jachei_app/features/auth/presentation/login_page.dart';
 import 'package:jachei_app/features/home/presentation/home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repositories/auth_repository.dart';
@@ -122,7 +123,9 @@ class _SignUpViewState extends State<SignUpView> {
                     const Text('Já tem uma conta?'),
                     TextButton(
                       onPressed: () {
-                        // Futuramente: Ir para a tela de Login normal
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        );
                       },
                       child: Text('Entrar', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
                     ),
