@@ -30,14 +30,25 @@ class ProfileView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: BlocConsumer<ProfileCubit, ProfileState>(
+        // --- O LISTENER PEGA OS ERROS SEM DESTRUIR A TELA ---
         listener: (context, state) {
-          // Lógica silenciosa caso o Cubit emita algo especial futuramente
+          if (state is ProfileError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red.shade800,
+                behavior: SnackBarBehavior.floating, // Fica "flutuando" na tela
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            );
+          }
         },
         builder: (context, state) {
           if (state is ProfileLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          else if (state is ProfileError) {
+          // O ProfileError só aparece centralizado se o Perfil falhar em carregar ao abrir a tela
+          else if (state is ProfileError && context.read<ProfileCubit>().state is! ProfileLoaded) {
             return Center(child: Text(state.message));
           }
           else if (state is ProfileLoaded) {
@@ -55,15 +66,21 @@ class ProfileView extends StatelessWidget {
                       CircleAvatar(
                         radius: 60,
                         backgroundColor: primaryColor.withOpacity(0.2),
-                        backgroundImage: state.localPhotoPath != null
-                            ? FileImage(File(state.localPhotoPath!)) as ImageProvider
-                            : NetworkImage(user.linkFoto), // Usa a foto do Banco
+                        // Usa a foto do Banco, se não houver exibe algo genérico
+                        backgroundImage: user.linkFoto.isNotEmpty ? NetworkImage(user.linkFoto) : null,
+                        child: user.linkFoto.isEmpty
+                            ? Text(user.nome[0], style: TextStyle(fontSize: 40, color: primaryColor))
+                            : null,
                       ),
                       GestureDetector(
                         onTap: () => context.read<ProfileCubit>().pickAndUploadPhoto(),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: primaryColor, shape: BoxShape.circle),
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2), // Borda branca para destacar o botão
+                          ),
                           child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                         ),
                       ),
@@ -83,7 +100,6 @@ class ProfileView extends StatelessWidget {
                       onTap: () { /* Navegar para Form de Edição */ }
                   ),
 
-                  // O botão muda dependendo se já é prestador no Spring Boot!
                   if (state.isPrestador)
                     _buildMenuTile(
                         icon: Icons.work,

@@ -261,11 +261,19 @@ class HomeContent extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
         leading: CircleAvatar(
+          radius: 25, // Aumentei um pouco o raio para a foto ficar mais bonita
           backgroundColor: primaryColor.withOpacity(0.2),
-          child: Text(
+          // Se tiver foto, mostra a imagem da web
+          backgroundImage: prestador.fotoPerfil.isNotEmpty
+              ? NetworkImage(prestador.fotoPerfil)
+              : null,
+          // Se NÃO tiver foto, desenha a inicial do nome
+          child: prestador.fotoPerfil.isEmpty
+              ? Text(
               prestador.nome.isNotEmpty ? prestador.nome[0] : '?',
               style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 20)
-          ),
+          )
+              : null,
         ),
         title: Text(prestador.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Column(

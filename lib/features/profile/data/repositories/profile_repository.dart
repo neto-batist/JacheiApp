@@ -28,4 +28,24 @@ class ProfileRepository {
       return false; // Se der 404, ele não é prestador ainda
     }
   }
+
+  Future<void> uploadFotoPerfil(String uid, String imagePath) async {
+    try {
+      // Cria o form-data do Dio para empacotar o arquivo
+      final formData = FormData.fromMap({
+        'foto': await MultipartFile.fromFile(
+          imagePath,
+          filename: imagePath.split('/').last,
+        ),
+      });
+
+      // Dispara para a rota do Spring Boot
+      await dio.post(
+        '/usuarios/me/$uid/foto',
+        data: formData,
+      );
+    } catch (e) {
+      throw Exception('Falha ao enviar foto para o servidor: $e');
+    }
+  }
 }
