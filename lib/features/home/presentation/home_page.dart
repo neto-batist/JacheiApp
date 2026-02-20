@@ -1,8 +1,8 @@
-// lib/features/home/presentation/home_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jachei_app/core/di/configure_dependencies.dart';
-import 'package:jachei_app/features/profile/presentation/profile_page.dart'; // <-- Import da tela de perfil
+import 'package:jachei_app/features/profile/presentation/profile_page.dart';
+import 'package:jachei_app/core/widgets/prestador_card.dart';
 import '../data/home_repository.dart';
 import '../data/models/prestador_model.dart';
 import 'home_cubit.dart';
@@ -217,7 +217,13 @@ class HomeContent extends StatelessWidget {
                             itemCount: state.prestadores.length,
                             itemBuilder: (context, index) {
                               final prestador = state.prestadores[index];
-                              return _buildProviderCard(context, prestador, primaryColor);
+                              return PrestadorCard(
+                                prestador: prestador,
+                                onTap: () {
+                                  // Aqui poderemos chamar o Navigator no futuro!
+                                  print("Clicou no prestador: ${prestador.nome}");
+                                },
+                              );
                             },
                           ),
                       ],
@@ -253,60 +259,4 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildProviderCard(BuildContext context, PrestadorModel prestador, Color primaryColor) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        leading: CircleAvatar(
-          radius: 25, // Aumentei um pouco o raio para a foto ficar mais bonita
-          backgroundColor: primaryColor.withOpacity(0.2),
-          // Se tiver foto, mostra a imagem da web
-          backgroundImage: prestador.fotoPerfil.isNotEmpty
-              ? NetworkImage(prestador.fotoPerfil)
-              : null,
-          // Se NÃO tiver foto, desenha a inicial do nome
-          child: prestador.fotoPerfil.isEmpty
-              ? Text(
-              prestador.nome.isNotEmpty ? prestador.nome[0] : '?',
-              style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 20)
-          )
-              : null,
-        ),
-        title: Text(prestador.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(prestador.categoriaMock),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.star, color: Colors.amber, size: 16),
-                const SizedBox(width: 4),
-                Text(prestador.notaMock, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (prestador.atende24H)
-              const Icon(Icons.access_time_filled, color: Colors.orange, size: 20),
-            if (prestador.fazDelivery)
-              const Padding(
-                padding: EdgeInsets.only(top: 4.0),
-                child: Icon(Icons.two_wheeler, color: Colors.teal, size: 20),
-              ),
-          ],
-        ),
-        onTap: () {
-          // Futuramente: Ir para a tela de detalhes do prestador
-        },
-      ),
-    );
-  }
 }
