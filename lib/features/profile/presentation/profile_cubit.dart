@@ -1,17 +1,28 @@
 // lib/features/profile/presentation/profile_cubit.dart
+import 'dart:io'; // Necessário para a manipulação do arquivo da foto
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../data/models/user_model.dart';
+
 import '../data/repositories/profile_repository.dart';
+import '../data/models/user_model.dart';
+import '../data/models/prestador_detalhado_model.dart';
 
 abstract class ProfileState {}
+
+class ProfileInitial extends ProfileState {}
+
 class ProfileLoading extends ProfileState {}
+
 class ProfileLoaded extends ProfileState {
   final UserModel user;
-  final bool isPrestador;
-  ProfileLoaded(this.user, this.isPrestador);
+  final PrestadorDetalhadoModel? prestador; // Nulo se for apenas usuário comum!
+
+  ProfileLoaded({
+    required this.user,
+    this.prestador,
+  });
 }
+
 class ProfileError extends ProfileState {
   final String message;
   ProfileError(this.message);
@@ -21,86 +32,68 @@ class ProfileCubit extends Cubit<ProfileState> {
   final ProfileRepository repository;
   final SharedPreferences prefs;
 
-  // --- O Pulo do Gato (Cache) ---
-  // Guardamos os dados em memória para a tela não sumir se um upload der erro
-  UserModel? _cachedUser;
-  bool _cachedIsPrestador = false;
+  ProfileCubit(this.repository, this.prefs) : super(ProfileInitial());
 
-  ProfileCubit(this.repository, this.prefs) : super(ProfileLoading());
+  // ===========================================================================
+  // CARREGAR DADOS (Busca Usuário e Painel Simultaneamente)
+  // ===========================================================================
+  Future<void> loadProfile({bool isRefresh = false}) async {
+    if (!isRefresh && state is! ProfileError) emit(ProfileLoading());
 
-  Future<void> loadProfile() async {
     try {
       final uid = prefs.getString('user_uid');
-      if (uid == null) throw Exception('Usuário não logado');
+      if (uid == null) throw Exception('Sessão expirada. Faça login novamente.');
 
+      // O Segredo da Performance: Disparamos as duas requisições ao mesmo tempo!
+      // A segunda requisição vai voltar nula graciosamente se ele não for prestador.
       final results = await Future.wait([
         repository.getUserProfile(uid),
-        repository.isPrestador(uid),
+        repository.getPrestadorPanel(),
       ]);
 
-      // Salva no cache antes de emitir para a tela
-      _cachedUser = results[0] as UserModel;
-      _cachedIsPrestador = results[1] as bool;
+      final user = results[0] as UserModel;
+      final prestador = results[1] as PrestadorDetalhadoModel?;
 
-      emit(ProfileLoaded(_cachedUser!, _cachedIsPrestador));
+      emit(ProfileLoaded(user: user, prestador: prestador));
     } catch (e) {
-      emit(ProfileError('Erro ao carregar os dados do perfil.'));
+      emit(ProfileError('Erro ao carregar os dados do perfil. Verifique sua conexão.'));
     }
   }
 
-  Future<void> pickAndUploadPhoto() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+  // ===========================================================================
+  // ATUALIZAR FOTO DE PERFIL
+  // ===========================================================================
+  Future<void> atualizarFoto(File foto) async {
+    // Só podemos atualizar se a tela já estiver carregada com os dados base
+    if (state is ProfileLoaded) {
+      final currentState = state as ProfileLoaded;
 
-    if (image != null) {
-      // 1. VALIDAÇÃO DE FORMATO (Lista Branca)
-      final nomeArquivo = image.name.toLowerCase();
-      if (!nomeArquivo.endsWith('.jpg') &&
-          !nomeArquivo.endsWith('.jpeg') &&
-          !nomeArquivo.endsWith('.png')) {
+      // Emitimos o Loading para a UI mostrar que a foto está subindo para o servidor
+      emit(ProfileLoading());
 
-        emit(ProfileError('Formato de foto indesejado. Selecione apenas imagens JPG ou PNG.'));
-        _restoreState(); // Volta a mostrar a tela de perfil normalmente
-        return;
-      }
-
-      // 2. VALIDAÇÃO DE TAMANHO (Max 10MB)
-      final tamanhoBytes = await image.length();
-      final tamanhoMB = tamanhoBytes / (1024 * 1024);
-      if (tamanhoMB > 10) {
-        emit(ProfileError('A foto é muito grande (${tamanhoMB.toStringAsFixed(1)}MB). O limite é 10MB.'));
-        _restoreState();
-        return;
-      }
-
-      // 3. UPLOAD REAL
       try {
         final uid = prefs.getString('user_uid');
-        if (uid == null) return;
+        if (uid == null) throw Exception('Sessão expirada.');
 
-        emit(ProfileLoading()); // Mostra o loading apenas enquanto envia
+        // Faz o upload real
+        final userAtualizado = await repository.atualizarFotoPerfil(uid, foto);
 
-        await repository.uploadFotoPerfil(uid, image.path);
-
-        // Sucesso! Busca o perfil novamente para pegar o link novo do Spring Boot
-        await loadProfile();
-
+        // Devolvemos a tela reconstruída com a nova foto, mantendo os dados do prestador intactos
+        emit(ProfileLoaded(user: userAtualizado, prestador: currentState.prestador));
       } catch (e) {
-        emit(ProfileError('Erro de conexão ao enviar a foto. Tente novamente.'));
-        _restoreState();
+        // Se a foto falhar (ex: arquivo muito grande), avisa e volta o estado de antes
+        emit(ProfileError('Erro ao enviar a foto. Tente novamente.'));
+        await Future.delayed(const Duration(seconds: 3));
+        emit(ProfileLoaded(user: currentState.user, prestador: currentState.prestador));
       }
     }
   }
 
-  // Função auxiliar que redesenha a tela com os dados em cache após um erro
-  void _restoreState() {
-    if (_cachedUser != null) {
-      emit(ProfileLoaded(_cachedUser!, _cachedIsPrestador));
-    }
-  }
-
+  // ===========================================================================
+  // SAIR DA CONTA
+  // ===========================================================================
   Future<void> logout() async {
+    await prefs.remove('auth_token');
     await prefs.remove('user_uid');
-    await prefs.remove('user_nome');
   }
 }

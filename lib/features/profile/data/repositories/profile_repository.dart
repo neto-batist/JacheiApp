@@ -1,7 +1,9 @@
-// lib/features/profile/data/profile_repository.dart
+// lib/features/profile/data/repositories/profile_repository.dart
+import 'dart:io'; // Necessário para enviar o arquivo da foto
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import '../models/user_model.dart';
+import '../models/prestador_detalhado_model.dart';
 
 @lazySingleton
 class ProfileRepository {
@@ -9,43 +11,50 @@ class ProfileRepository {
 
   ProfileRepository(this.dio);
 
-  // 1. Busca os dados do usuário atual
+  // 1. Busca os dados de Usuário Comum
   Future<UserModel> getUserProfile(String uid) async {
     try {
       final response = await dio.get('/usuarios/me/$uid');
       return UserModel.fromJson(response.data);
     } catch (e) {
-      throw Exception('Falha ao carregar perfil.');
+      throw Exception('Falha ao carregar perfil do usuário: $e');
     }
   }
 
-  // 2. Verifica se ele JÁ É um prestador de serviços
-  Future<bool> isPrestador(String uid) async {
+  // 2. Tenta buscar o Painel de Prestador (Se existir)
+  Future<PrestadorDetalhadoModel?> getPrestadorPanel() async {
     try {
-      final response = await dio.get('/prestadores/me/$uid');
-      return response.statusCode == 200;
+      final response = await dio.get('/prestadores/me');
+      return PrestadorDetalhadoModel.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return null; // É apenas um usuário comum
+      }
+      throw Exception('Falha ao carregar painel do prestador: $e');
     } catch (e) {
-      return false; // Se der 404, ele não é prestador ainda
+      throw Exception('Erro desconhecido ao carregar prestador: $e');
     }
   }
 
-  Future<void> uploadFotoPerfil(String uid, String imagePath) async {
+  // 3. O MÉTODO DE VOLTA: Atualizar Foto de Perfil via Multipart
+  Future<UserModel> atualizarFotoPerfil(String uid, File foto) async {
     try {
-      // Cria o form-data do Dio para empacotar o arquivo
-      final formData = FormData.fromMap({
-        'foto': await MultipartFile.fromFile(
-          imagePath,
-          filename: imagePath.split('/').last,
-        ),
+      String fileName = foto.path.split('/').last;
+
+      // Monta o formulário de dados nos padrões que o Spring Boot exige
+      FormData formData = FormData.fromMap({
+        "foto": await MultipartFile.fromFile(foto.path, filename: fileName),
       });
 
-      // Dispara para a rota do Spring Boot
-      await dio.post(
+      final response = await dio.post(
         '/usuarios/me/$uid/foto',
         data: formData,
       );
+
+      // O backend já devolve o DTO do usuário atualizado!
+      return UserModel.fromJson(response.data);
     } catch (e) {
-      throw Exception('Falha ao enviar foto para o servidor: $e');
+      throw Exception('Falha ao atualizar foto de perfil: $e');
     }
   }
 }
