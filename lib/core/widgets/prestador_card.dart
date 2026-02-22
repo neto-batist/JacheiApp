@@ -1,19 +1,21 @@
+// lib/core/widgets/prestador_card.dart
 import 'package:flutter/material.dart';
 import 'package:jachei_app/features/home/data/models/prestador_model.dart';
 
 class PrestadorCard extends StatelessWidget {
   final PrestadorModel prestador;
   final VoidCallback? onTap;
+  final VoidCallback? onFavoriteTap; // <--- O PARÂMETRO DECLARADO AQUI
 
   const PrestadorCard({
     super.key,
     required this.prestador,
-    this.onTap, // Permite que cada tela decida o que acontece ao clicar
+    this.onTap,
+    this.onFavoriteTap, // <--- O PARÂMETRO INSERIDO NO CONSTRUTOR AQUI
   });
 
   @override
   Widget build(BuildContext context) {
-    // Puxa a cor primária do tema global automaticamente
     final primaryColor = Theme.of(context).primaryColor;
 
     return Card(
@@ -22,6 +24,7 @@ class PrestadorCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
+
         // --- FOTO DE PERFIL ---
         leading: CircleAvatar(
           radius: 25,
@@ -31,7 +34,7 @@ class PrestadorCard extends StatelessWidget {
               : null,
           child: prestador.fotoPerfil.isEmpty
               ? Text(
-              prestador.nome.isNotEmpty ? prestador.nome[0] : '?',
+              prestador.nome.isNotEmpty ? prestador.nome[0].toUpperCase() : '?',
               style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 20)
           )
               : null,
@@ -43,36 +46,56 @@ class PrestadorCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text(prestador.categoriaMock), // Em breve vindo do banco real
+            Text(prestador.servicoPrincipal), // Dado Real vindo da API
             const SizedBox(height: 4),
             Row(
               children: [
                 const Icon(Icons.star, color: Colors.amber, size: 16),
                 const SizedBox(width: 4),
-                Text(prestador.notaMock, style: const TextStyle(fontWeight: FontWeight.bold)),
+                // Exibe a nota formatada, ou "Novo" se for 0.0
+                Text(
+                  prestador.mediaAvaliacoes > 0
+                      ? prestador.mediaAvaliacoes.toStringAsFixed(1)
+                      : 'Novo',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ],
         ),
 
-        // --- ÍCONES DE STATUS (24h / Delivery) ---
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // --- ÍCONES (24H, DELIVERY E CORAÇÃO) ---
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min, // Impede que a Row empurre o título
           children: [
-            if (prestador.atende24H)
-              const Icon(Icons.access_time_filled, color: Colors.orange, size: 20),
-            if (prestador.fazDelivery)
-              const Padding(
-                padding: EdgeInsets.only(top: 4.0),
-                child: Icon(Icons.two_wheeler, color: Colors.teal, size: 20),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (prestador.atende24H)
+                  const Icon(Icons.access_time_filled, color: Colors.orange, size: 18),
+                if (prestador.fazDelivery)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4.0),
+                    child: Icon(Icons.two_wheeler, color: Colors.teal, size: 18),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12), // Espaço entre os ícones e o coração
+
+            // O botão de Favoritar!
+            GestureDetector(
+              onTap: onFavoriteTap, // <--- A AÇÃO DO CLIQUE
+              child: Icon(
+                prestador.isFavorito ? Icons.favorite : Icons.favorite_border,
+                color: prestador.isFavorito ? Colors.red : Colors.grey.shade400,
+                size: 28,
               ),
+            ),
           ],
         ),
 
-        // --- AÇÃO DO CLIQUE ---
-        onTap: onTap ?? () {
-          // Ação padrão: Por enquanto não faz nada, mas futuramente vai pra tela de detalhes
-        },
+        // --- AÇÃO DO CLIQUE NO CARD INTEIRO ---
+        onTap: onTap,
       ),
     );
   }

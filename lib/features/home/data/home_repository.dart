@@ -1,4 +1,3 @@
-// lib/features/home/data/home_repository.dart
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import 'models/prestador_model.dart';
@@ -10,31 +9,45 @@ class HomeRepository {
 
   HomeRepository(this.dio);
 
-  // Agora recebe Latitude e Longitude!
-  Future<List<PrestadorModel>> getPrestadoresProximos(double lat, double lng) async {
+  Future<List<PrestadorModel>> buscarPrestadoresProximos(double lat, double lng) async {
     try {
-      // Passando as coordenadas via Query Parameters (raio padrão de 50km para testes)
-      final response = await dio.get('/prestadores/proximos', queryParameters: {
-        'lat': lat,
-        'lng': lng,
-        'raioKm': 50,
-      });
+      // 1. Usando a nova rota unificada com os filtros dinâmicos via QueryParams
+      final response = await dio.get(
+        '/prestadores',
+        queryParameters: {
+          'latitudeUsuario': lat,
+          'longitudeUsuario': lng,
+          'raioKm': 15.0, // Busca num raio de 15km
+          'size': 20,     // Traz 20 prestadores de uma vez para popular a Home
+        },
+      );
 
-      final List dados = response.data;
+      // 2. Extrai a lista de dentro da propriedade 'content' da página do Spring
+      final List dados = response.data['content'] ?? [];
+
       return dados.map((json) => PrestadorModel.fromJson(json)).toList();
-
     } catch (e) {
-      throw Exception('Falha ao conectar no backend Java.');
+      throw Exception('Falha ao carregar prestadores: $e');
     }
   }
 
-  Future<List<CategoriaModel>> getCategorias() async {
+  // O buscarCategorias permanece igual por enquanto!
+  Future<List<CategoriaModel>> buscarCategorias() async {
     try {
       final response = await dio.get('/catalogo/categorias');
       final List dados = response.data;
       return dados.map((json) => CategoriaModel.fromJson(json)).toList();
     } catch (e) {
-      throw Exception('Falha ao buscar categorias.');
+      throw Exception('Falha ao carregar categorias: $e');
+    }
+  }
+
+  Future<void> alternarFavoritoBackend(String uidUsuario, int idPrestador) async {
+    try {
+      // Bate na nossa rota cravada no Java (A mesma que usamos no script Python!)
+      await dio.post('/usuarios/me/$uidUsuario/favoritos/$idPrestador');
+    } catch (e) {
+      throw Exception('Falha ao favoritar: $e');
     }
   }
 }
