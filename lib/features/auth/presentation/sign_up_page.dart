@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jachei_app/core/di/configure_dependencies.dart';
 import 'package:jachei_app/features/auth/presentation/login_page.dart';
-import 'package:jachei_app/features/home/presentation/home_page.dart';
+import 'package:jachei_app/features/main/presentation/main_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repositories/auth_repository.dart';
 import 'auth_cubit.dart';
@@ -52,7 +52,7 @@ class _SignUpViewState extends State<SignUpView> {
           } else if (state is AuthSuccess) {
             // Se deu certo, vai para a HomePage e remove a tela de Login do histórico
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const HomePage()),
+              MaterialPageRoute(builder: (_) => const MainPage()),
             );
           }
         },

@@ -5,6 +5,7 @@ import 'package:jachei_app/features/home/presentation/home_page.dart';
 import 'package:jachei_app/features/auth/presentation/sign_up_page.dart';
 import 'package:jachei_app/core/di/configure_dependencies.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jachei_app/features/main/presentation/main_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -47,7 +48,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
               if (mounted) {
                 if (existe) {
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const HomePage()),
+                    MaterialPageRoute(builder: (_) => const MainPage()),
                   );
                 } else {
                   // Fantasma ou Token Inválido! Apaga tudo do celular.
