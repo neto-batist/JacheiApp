@@ -28,8 +28,8 @@ class HomeCubit extends Cubit<HomeState> {
 
   HomeCubit(this.repository, this.prefs) : super(HomeInitial());
 
-  Future<void> getUserLocationAndData() async {
-    if (state is! HomeError) emit(HomeLoading());
+  Future<void> getUserLocationAndData({bool isRefresh = false}) async {
+    if (!isRefresh && state is! HomeError) emit(HomeLoading());
 
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();

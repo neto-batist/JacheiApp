@@ -56,102 +56,109 @@ class HomeView extends StatelessWidget {
           }
 
           if (state is HomeLoaded) {
-            return CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  backgroundColor: primaryColor,
-                  floating: true,
-                  pinned: true,
-                  elevation: 2,
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Sua localização', style: TextStyle(fontSize: 12, color: Colors.white70)),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, size: 16, color: Colors.white),
-                          const SizedBox(width: 4),
-                          Text(state.city, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+            return RefreshIndicator(
+                color: primaryColor,
+                onRefresh: () async {
+                  // 2. CHAMA O MÉTODO PASSANDO A FLAG TRUE!
+                  await context.read<HomeCubit>().getUserLocationAndData(isRefresh: true);
+                },
+                child: CustomScrollView(
+                    slivers: [
+                      SliverAppBar(
+                        backgroundColor: primaryColor,
+                        floating: true,
+                        pinned: true,
+                        elevation: 2,
+                        title: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Sua localização', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on, size: 16, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(state.city, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                              ],
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          IconButton(icon: const Icon(Icons.notifications_none, color: Colors.white), onPressed: () {}),
                         ],
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    IconButton(icon: const Icon(Icons.notifications_none, color: Colors.white), onPressed: () {}),
-                  ],
-                  bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(70),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Container(
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'O que você está procurando?',
-                            prefixIcon: Icon(Icons.search, color: primaryColor),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        bottom: PreferredSize(
+                          preferredSize: const Size.fromHeight(70),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: Container(
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  hintText: 'O que você está procurando?',
+                                  prefixIcon: Icon(Icons.search, color: primaryColor),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
 
-                SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
-                        child: Text('Categorias', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
-                      SizedBox(
-                        height: 100,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          itemCount: state.categorias.length,
-                          itemBuilder: (context, index) {
-                            final categoria = state.categorias[index];
-                            // --- USANDO O COMPONENTE INTELIGENTE AQUI ---
-                            return CategoryItem(
-                              categoria: categoria,
-                              onTap: () {
-                                print("Filtrar por: ${categoria.nome}");
-                              },
-                            );
-                          },
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
+                              child: Text('Categorias', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            ),
+                            SizedBox(
+                              height: 100,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                itemCount: state.categorias.length,
+                                itemBuilder: (context, index) {
+                                  final categoria = state.categorias[index];
+                                  // --- USANDO O COMPONENTE INTELIGENTE AQUI ---
+                                  return CategoryItem(
+                                    categoria: categoria,
+                                    onTap: () {
+                                      print("Filtrar por: ${categoria.nome}");
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
+                              child: Text('Profissionais Próximos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
                         ),
                       ),
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
-                        child: Text('Profissionais Próximos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                ),
 
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                        final prestador = state.prestadores[index];
-                        return PrestadorCard(
-                          prestador: prestador,
-                          onTap: () {},
-                          onFavoriteTap: () {
-                            context.read<HomeCubit>().toggleFavorito(prestador);
-                          },
-                        );
-                      },
-                      childCount: state.prestadores.length,
-                    ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 24)),
-              ],
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                              final prestador = state.prestadores[index];
+                              return PrestadorCard(
+                                prestador: prestador,
+                                onTap: () {},
+                                onFavoriteTap: () {
+                                  context.read<HomeCubit>().toggleFavorito(prestador);
+                                },
+                              );
+                            },
+                            childCount: state.prestadores.length,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    ],
+                )
             );
           }
 
